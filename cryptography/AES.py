@@ -230,182 +230,36 @@ class AES:
             outputf = inputf + ".enc"
         with open(inputf, 'rb') as f, open(outputf, 'wb') as g:
             g.write(iv)
-            j = 1
             while True:
                 chunk = f.read(chunksize)
                 if len(chunk) == 0:
                     break
                 enc = self.encrypt(chunk, iv)
                 g.write(enc)
-                print("chunk {} encrypted".format(j))
-                j += 1
+        return outputf
 
     def decrypt_file(self, inputf, outputf=None, chunksize=64*1024):
         if not outputf:
             outputf = "decrypted-" + inputf.split(".enc")[0]
+
         with open(inputf, 'rb') as f, open(outputf, 'wb') as g:
             iv = f.read(16)
-            j = 1
             while True:
                 chunk = f.read(chunksize)
                 if len(chunk) == 0:
                     break
                 dec = self.decrypt(chunk, iv)
                 g.write(dec)
-                print("chunk {} decrypted".format(j))
-                j += 1
-
-    def encrypt_cbc(self, plaintext, iv):
-        plaintext = pad(plaintext)
-        blocks = []
-        previous = iv
-        for plaintext_block in split_blocks(plaintext):
-            # encrypt(plaintext_block XOR previous)
-            block = self.encrypt_block(xor_bytes(plaintext_block, previous))
-            blocks.append(block)
-            previous = block
-        return b''.join(blocks)
-
-    def decrypt_cbc(self, ciphertext, iv):
-        blocks = []
-        previous = iv
-        for ciphertext_block in split_blocks(ciphertext):
-            # previous XOR decrypt(ciphertext)
-            blocks.append(xor_bytes(previous, self.decrypt_block(ciphertext_block)))
-            previous = ciphertext_block
-        return unpad(b''.join(blocks))
-
-    def encrypt_cfb(self, plaintext, iv):
-        blocks = []
-        prev_ciphertext = iv
-        for plaintext_block in split_blocks(plaintext):
-            # plaintext_block XOR encrypt(prev_ciphertext)
-            ciphertext_block = xor_bytes(plaintext_block, self.encrypt_block(prev_ciphertext))
-            blocks.append(ciphertext_block)
-            prev_ciphertext = ciphertext_block
-        return b''.join(blocks)
-
-    def decrypt_cfb(self, ciphertext, iv):
-        blocks = []
-        prev_ciphertext = iv
-        for ciphertext_block in split_blocks(ciphertext):
-            # ciphertext XOR decrypt(prev_ciphertext)
-            plaintext_block = xor_bytes(ciphertext_block, self.encrypt_block(prev_ciphertext))
-            blocks.append(plaintext_block)
-            prev_ciphertext = ciphertext_block
-        return b''.join(blocks)
-
-    def encrypt_ofb(self, plaintext, iv):
-        blocks = []
-        previous = iv
-        for plaintext_block in split_blocks(plaintext):
-            # plaintext_block XOR encrypt(previous)
-            block = self.encrypt_block(previous)
-            ciphertext_block = xor_bytes(plaintext_block, block)
-            blocks.append(ciphertext_block)
-            previous = block
-        return b''.join(blocks)
-
-    def decrypt_ofb(self, ciphertext, iv):
-        blocks = []
-        previous = iv
-        for ciphertext_block in split_blocks(ciphertext):
-            # ciphertext XOR encrypt(previous)
-            block = self.encrypt_block(previous)
-            plaintext_block = xor_bytes(ciphertext_block, block)
-            blocks.append(plaintext_block)
-            previous = block
-        return b''.join(blocks)
-
-    @staticmethod
-    def inc_bytes(a):
-        out = list(a)
-        for i in reversed(range(len(out))):
-            if out[i] == 0xFF:
-                out[i] = 0
-            else:
-                out[i] += 1
-                break
-        return bytes(out)
-
-    def encrypt_ctr(self, plaintext, iv):
-        blocks = []
-        nonce = iv
-        for plaintext_block in split_blocks(plaintext):
-            # CTR mode encrypt: plaintext_block XOR encrypt(nonce)
-            block = xor_bytes(plaintext_block, self.encrypt_block(nonce))
-            blocks.append(block)
-            nonce = self.inc_bytes(nonce)
-        return b''.join(blocks)
-
-    def decrypt_ctr(self, ciphertext, iv):
-        blocks = []
-        nonce = iv
-        for ciphertext_block in split_blocks(ciphertext):
-            # CTR mode decrypt: ciphertext XOR encrypt(nonce)
-            block = xor_bytes(ciphertext_block, self.encrypt_block(nonce))
-            blocks.append(block)
-            nonce = self.inc_bytes(nonce)
-        return b''.join(blocks)
 
 
-import time
-def benchmark():
-    IV = get_iv()
-    import os
-    master_k = os.urandom(32)
-    aes_obj = AES(master_k)
-    message = b'M'*64*1024
-
-    # ECB
-    start = time.time()
-    enc = []
-    for block in split_blocks(message):
-        enc.append(aes_obj.encrypt_block(block))
-    stop1 = time.time()
-    dec = []
-    for cip in split_blocks(b''.join(enc)):
-        dec.append(aes_obj.decrypt_block(cip))
-    stop2 = time.time()
-    if message == b''.join(dec):
-        print('***ECB*** 64*1024 bytes encrypted in {}; decrypted in {}'.format(stop1-start, stop2-stop1))
-
-    # CBC
-    start = time.time()
-    enc = aes_obj.encrypt_cbc(message, IV)
-    stop1 = time.time()
-    dec = aes_obj.decrypt_cbc(enc, IV)
-    stop2 = time.time()
-    if message == dec:
-        print('***CBC*** 64*1024 bytes encrypted in {}; decrypted in {}'.format(stop1-start, stop2-stop1))
-
-    # CFB
-    start = time.time()
-    enc = aes_obj.encrypt_cfb(message, IV)
-    stop1 = time.time()
-    dec = aes_obj.decrypt_cfb(enc, IV)
-    stop2 = time.time()
-    if message == dec:
-        print('***CFB*** 64*1024 bytes encrypted in {}; decrypted in {}'.format(stop1-start, stop2-stop1))
-
-    # OFB
-    start = time.time()
-    enc = aes_obj.encrypt_ofb(message, IV)
-    stop1 = time.time()
-    dec = aes_obj.decrypt_ofb(enc, IV)
-    stop2 = time.time()
-    if message == dec:
-        print('***OFB*** 64*1024 bytes encrypted in {}; decrypted in {}'.format(stop1 - start, stop2 - stop1))
-
-    # CTR
-    start = time.time()
-    enc = aes_obj.encrypt_ctr(message, IV)
-    stop1 = time.time()
-    dec = aes_obj.decrypt_ctr(enc, IV)
-    stop2 = time.time()
-    if message == dec:
-        print('***CTR*** 64*1024 bytes encrypted in {}; decrypted in {}'.format(stop1 - start, stop2 - stop1))
-
-
+import os
 if __name__ == '__main__':
-    benchmark()
+    msg = b'msg'
+    key = os.urandom(32)
+    aes_obj = AES(key)
+
+    iv = get_iv()
+    encr = aes_obj.encrypt(msg, iv=iv)
+    decr = aes_obj.decrypt(encr, iv=iv)
+    if msg == decr:
+        print(decr)

@@ -160,12 +160,32 @@ def oaep_padding(plaintext, g, h):
     return G + H, pltx
 
 
+def oaep_unpad(raw):
+    raw = raw.replace(b'\x00', b'')
+    return raw
+
+
 class RSA:
-    def __init__(self, k_length=1024):
+    def __init__(self, k_length=1024, file=None):
         self.key_length = k_length
-        self.p = generate_prime_number(self.key_length)
-        self.q = generate_prime_number(self.key_length)
-        self.public_key, self.private_key = self.generate_keypairs()
+        if file:
+            with open(file, 'r') as f:
+                self.p = int(f.readline())
+                self.q = int(f.readline())
+                pub = f.readline().rstrip('\n').replace(' ', '')[1:-1].split(',')
+                self.public_key = (int(pub[0]), int(pub[1]))
+                priv = f.readline().rstrip('\n').replace(' ', '')[1:-1].split(',')
+                self.private_key = (int(priv[0]), int(priv[1]))
+        else:
+            self.p = generate_prime_number(self.key_length)
+            self.q = generate_prime_number(self.key_length)
+            self.public_key, self.private_key = self.generate_keypairs()
+
+    def save_config(self, path):
+        with open(path, 'w') as file:
+            for line in [self.p, self.q, self.public_key, self.private_key]:
+                file.write(str(line) + '\n')
+        file.close()
 
     def generate_keypairs(self):
         p = self.p
@@ -201,17 +221,6 @@ class RSA:
         d, n = priv_key if priv_key else self.private_key
         return bytes([chinese_remainder_theorem(d, self.p, self.q, c) for c in ciphertext])
 
-    # def encrypt(self, plaintext):
-    #     e, n = self.public_key
-    #     barr = bytearray(plaintext)
-    #     p_int = int.from_bytes(plaintext, 'big')
-    #     return pow_mod(p_int, e, n)
-    #
-    # def decrypt(self, ciphertext):
-    #     d, n = self.private_key
-    #     dec = chinese_remainder_theorem(d, self.p, self.q, ciphertext)
-    #     return dec.to_bytes(512, 'big')
-
     def oaep_encrypt(self, plaintext, g, h, pub_key=None):
         plaintext, _ = oaep_padding(plaintext, g, h)
         e, n = pub_key if pub_key else self.public_key
@@ -220,7 +229,7 @@ class RSA:
 
     def oaep_decrypt(self, ciphertext, g, h, priv_key=None):
         d, n = priv_key if priv_key else self.private_key
-        decr = bytes([chinese_remainder_theorem(d, self.p, self.q, c) for c in ciphertext])
+        decr = bytes([pow_mod(c, d, n) for c in ciphertext])
         G = decr[:g // 8]
         H = decr[g // 8:]
 
@@ -228,33 +237,13 @@ class RSA:
         return xor_bytes(hash_case(r, g), G)
 
 
-import time
-def benchmark(msg):
-    for i in range(512, 1025, 128):
-        print("prime numbers length: {}".format(i))
-        start = time.time()
-        rsa_obj = RSA(i)
-        enc = rsa_obj.encrypt(msg)
-        dec = rsa_obj.decrypt(enc)
-        stop = time.time()
-        if msg == dec:
-            print("RSA: {} seconds".format(stop - start))
-
-        g = ((i // 128) // 2) * 128
-        h = i - g
-        start = time.time()
-        rsa_obj1 = RSA(i)
-        enc = rsa_obj1.oaep_encrypt(msg, g, h)
-        dec = rsa_obj1.oaep_decrypt(enc, g, h)
-        stop = time.time()
-        print("OAEP RSA: {} seconds".format(stop - start))
-
 
 if __name__ == '__main__':
     rsa_obj = RSA(1024)
-    msg = b'msg'*8
-    oaep_enc = rsa_obj.oaep_encrypt(msg, 384, 512)
-    oaep_dec = rsa_obj.oaep_decrypt(oaep_enc, 384, 512)
-    _, padded = oaep_padding(msg, 384, 512)
-    assert padded == oaep_dec
-    benchmark(msg)
+    g=h=512
+    msg = b'msg'*3
+    oaep_enc = rsa_obj.oaep_encrypt(msg, g, h)
+    oaep_dec = rsa_obj.oaep_decrypt(oaep_enc, g, h)
+
+    if oaep_unpad(oaep_dec) == msg:
+        print(oaep_unpad(oaep_dec))

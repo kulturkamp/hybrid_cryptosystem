@@ -1,5 +1,3 @@
-from secrets import token_bytes
-
 K = (0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
      0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
      0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,
@@ -59,16 +57,6 @@ class sha256():
         return b''.join(d.to_bytes(4, 'big') for d in digest)
 
 
-def proof_of_work():
-    while True:
-        x = token_bytes(32)
-        sha = sha256(x)
-        hash = sha.hash()
-        srt = ''.join('{:02x}'.format(i) for i in hash)
-        if srt[:20] == '0'*20:
-            break
-
-
 if __name__ == '__main__':
     sha_obj = sha256(b'text')
     hash = sha_obj.hash()
@@ -77,9 +65,3 @@ if __name__ == '__main__':
     sha_obj = sha256(b'test123123')
     hash = sha_obj.hash()
     assert 'f4c2178860817a2c25d2cb3185aa25779b0ecaf17c30845926218e17a18a9f89' == ''.join('{:02x}'.format(i) for i in hash)
-
-    # import time
-    # start = time.time()
-    # proof_of_work()
-    # stop = time.time()
-    # print(stop-start)

@@ -1,10 +1,11 @@
 <!DOCTYPE html>
+
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta http-equiv="X-UA-Compatible" content="ie=edge" />
-    <title>Сommunication</title>
+    <title>Encryption</title>
     <link
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/skeleton/2.0.4/skeleton.min.css"
@@ -22,12 +23,12 @@
   </head>
   <body>
     <div class="container">
-      <h3>Secure communication channel</h3>
+      <h3>Encryption demo</h3>
     </div>
 
     <!-- Form -->
     <div class="container">
-      <form action="/send" method="POST">
+      <form action="/encrypt" method="POST">
         <label for="sender">Sender name</label>
         <input
           type="text"
@@ -50,12 +51,12 @@
           class="u-full-width"
           name="message"
         />
-        <input type="submit" value="Send" id="send_btn" />
+        <input type="submit" value="Encrypt message" id="encr_btn" />
         <br />
         <div class="alert">
           {{ integrity}}
         </div>
-          <div style="height:120px;width:device-width;border:1px solid #ccc;font:16px/26px Georgia, Garamond, Serif;overflow:auto;white-space: pre-wrap;">{{encr}}&#10;{{decr}}
+          <div style="height:120px;width:device-width;border:1px solid #ccc;font:16px/26px Georgia, Garamond, Serif;overflow:auto;white-space: pre-wrap;">{{key}}&#10;{{encr}}&#10;{{decr}}
           </div>
       </form>
     </div>
